@@ -1,3 +1,4 @@
+mod tests;
 use std::collections::HashMap;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -5,6 +6,29 @@ pub enum Error {
     RankParse,
     FileParse,
     Move(MoveError),
+}
+#[cfg(feature = "actix")]
+impl From<Error> for actix_web::Error {
+    fn from(err: Error) -> actix_web::Error {
+        match err {
+            Error::RankParse => actix_web::error::ErrorBadRequest("Invalid rank"),
+            Error::FileParse => actix_web::error::ErrorBadRequest("Invalid file"),
+            Error::Move(move_error) => match move_error {
+                MoveError::EmptyStartingSquare => {
+                    actix_web::error::ErrorBadRequest("Starting square is empty")
+                }
+                MoveError::NotYourTurn => actix_web::error::ErrorBadRequest("Not your turn"),
+                MoveError::FriendlyFire => {
+                    actix_web::error::ErrorBadRequest("Friendly fire is not allowed")
+                }
+                MoveError::InvalidPath(r) => {
+                    actix_web::error::ErrorBadRequest(format!("Invalid path. Reason: {}", r))
+                }
+                MoveError::PathIsBlocked => actix_web::error::ErrorBadRequest("Path is blocked"),
+                MoveError::NoMotion => actix_web::error::ErrorBadRequest("No motion"),
+            },
+        }
+    }
 }
 
 #[cfg(any(test, debug))]

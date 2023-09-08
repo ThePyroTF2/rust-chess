@@ -1,4 +1,4 @@
-use crate::chess::*;
+use crate::*;
 
 #[test]
 fn standard_movement() {

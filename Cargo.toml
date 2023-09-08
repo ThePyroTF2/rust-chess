@@ -1,5 +1,5 @@
 [package]
-name = "rust_chess_api"
+name = "rust-chess"
 version = "0.1.0"
 edition = "2021"
 
@@ -11,22 +11,7 @@ serde = { version = "1.0.183", features = ["derive"], optional = true }
 serde_json = { version = "1.0.104", optional = true }
 tokio = { version = "1.30.0", optional = true }
 
-[[bin]]
-name = "rust_chess_api"
-path = "src/main.rs"
-required-features = ["binary"]
-
-[lib]
-name = "rust_chess_api"
-path = "src/lib.rs"
-
 [features]
 actions = []
-binary = [
-    "dep:actix-web",
-    "dep:serde",
-    "dep:serde_json",
-    "dep:tokio",
-    "actions",
-]
 serde = ["dep:serde", "dep:serde_json"]
+actix = ["dep:actix-web", "dep:tokio", "serde"]
