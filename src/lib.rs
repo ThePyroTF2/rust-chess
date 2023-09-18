@@ -31,7 +31,7 @@ impl From<Error> for actix_web::Error {
     }
 }
 
-#[cfg(any(test, debug))]
+#[cfg(any(test, debug_assertions))]
 #[derive(Debug, PartialEq, Eq)]
 pub struct SquareOccupied;
 
@@ -413,7 +413,7 @@ impl Board {
         *self = Self::default();
     }
 
-    #[cfg(any(test, debug))]
+    #[cfg(any(test, debug_assertions))]
     pub fn remove_troop(&mut self, position: Position) -> Option<Troop> {
         let square = self
             .squares
@@ -424,7 +424,7 @@ impl Board {
         square.troop.take()
     }
 
-    #[cfg(any(test, debug))]
+    #[cfg(any(test, debug_assertions))]
     pub fn place_troop(&mut self, troop: Troop) -> Result<(), SquareOccupied> {
         if self
             .squares
@@ -446,7 +446,7 @@ impl Board {
         Ok(())
     }
 
-    #[cfg(any(test, debug))]
+    #[cfg(any(test, debug_assertions))]
     pub fn replace_troop(&mut self, position: Position, troop: Troop) -> Option<Troop> {
         let square = self
             .squares
@@ -459,7 +459,7 @@ impl Board {
         old_troop
     }
 
-    #[cfg(any(test, debug))]
+    #[cfg(any(test, debug_assertions))]
     pub fn set_state(&mut self, state: BoardState) {
         self.state = state;
     }
