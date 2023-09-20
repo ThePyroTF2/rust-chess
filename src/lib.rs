@@ -225,6 +225,16 @@ impl Board {
             .unwrap()
             .troop = None;
 
+        self.squares
+            .get_mut(&to.file)
+            .unwrap()
+            .get_mut(&to.rank)
+            .unwrap()
+            .troop
+            .as_mut()
+            .unwrap()
+            .position = to;
+
         // TODO: Better state management (turn should only toggle if nothing else is triggered by
         // move. i.e., check, checkmate)
         match self.state {
