@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 actix-web = { version = "4.3.1", optional = true }
+lambda_runtime = { version = "0.8.2", optional = true }
 serde = { version = "1.0.183", features = ["derive"], optional = true }
 serde_json = { version = "1.0.104", optional = true }
 tokio = { version = "1.30.0", optional = true }
@@ -15,3 +16,4 @@ tokio = { version = "1.30.0", optional = true }
 actions = []
 serde = ["dep:serde", "dep:serde_json"]
 actix = ["dep:actix-web", "dep:tokio", "serde"]
+lambda = ["dep:lambda_runtime", "dep:tokio", "serde"]

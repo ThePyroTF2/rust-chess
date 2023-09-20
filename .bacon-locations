@@ -1,3 +1,13 @@
+error /home/devin/Software Dev/rust-chess/src/lib.rs:38:33 failed to resolve: use of undeclared crate or module `lambda_http`
+error /home/devin/Software Dev/rust-chess/src/lib.rs:39:33 failed to resolve: use of undeclared crate or module `lambda_http`
+error /home/devin/Software Dev/rust-chess/src/lib.rs:42:21 failed to resolve: use of undeclared crate or module `lambda_http`
+error /home/devin/Software Dev/rust-chess/src/lib.rs:44:43 failed to resolve: use of undeclared crate or module `lambda_http`
+error /home/devin/Software Dev/rust-chess/src/lib.rs:45:44 failed to resolve: use of undeclared crate or module `lambda_http`
+error /home/devin/Software Dev/rust-chess/src/lib.rs:47:21 failed to resolve: use of undeclared crate or module `lambda_http`
+error /home/devin/Software Dev/rust-chess/src/lib.rs:49:45 failed to resolve: use of undeclared crate or module `lambda_http`
+error /home/devin/Software Dev/rust-chess/src/lib.rs:50:40 failed to resolve: use of undeclared crate or module `lambda_http`
+error /home/devin/Software Dev/rust-chess/src/lib.rs:35:22 failed to resolve: use of undeclared crate or module `lambda_http`
+error /home/devin/Software Dev/rust-chess/src/lib.rs:36:28 failed to resolve: use of undeclared crate or module `lambda_http`
 warning /home/devin/Software Dev/rust-chess/src/tests/movement/bishop.rs:1:5 unused import: `crate::*`
 warning /home/devin/Software Dev/rust-chess/src/tests/movement/king.rs:1:5 unused import: `crate::*`
 warning /home/devin/Software Dev/rust-chess/src/tests/movement/knight.rs:1:5 unused import: `crate::*`

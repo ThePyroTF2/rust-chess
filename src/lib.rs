@@ -31,6 +31,28 @@ impl From<Error> for actix_web::Error {
     }
 }
 
+#[cfg(feature = "lambda")]
+impl From<Error> for lambda_http::Error {
+    fn from(err: Error) -> lambda_http::Error {
+        match err {
+            Error::RankParse => lambda_http::Error::from("Invalid rank"),
+            Error::FileParse => lambda_http::Error::from("Invalid file"),
+            Error::Move(move_error) => match move_error {
+                MoveError::EmptyStartingSquare => {
+                    lambda_http::Error::from("Starting square is empty")
+                }
+                MoveError::NotYourTurn => lambda_http::Error::from("Not your turn"),
+                MoveError::FriendlyFire => lambda_http::Error::from("Friendly fire is not allowed"),
+                MoveError::InvalidPath(r) => {
+                    lambda_http::Error::from(format!("Invalid path. Reason: {}", r))
+                }
+                MoveError::PathIsBlocked => lambda_http::Error::from("Path is blocked"),
+                MoveError::NoMotion => lambda_http::Error::from("No motion"),
+            },
+        }
+    }
+}
+
 #[cfg(any(test, debug_assertions))]
 #[derive(Debug, PartialEq, Eq)]
 pub struct SquareOccupied;
