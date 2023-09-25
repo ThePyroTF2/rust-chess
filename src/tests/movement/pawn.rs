@@ -171,3 +171,38 @@ fn blocked_path() {
         Err(Error::Move(MoveError::PathIsBlocked))
     );
 }
+
+#[test]
+fn backwards() {
+    let mut board = Board::default();
+    board
+        .move_troop(
+            Position {
+                file: File::A,
+                rank: Rank::Two,
+            },
+            Position {
+                file: File::A,
+                rank: Rank::Three,
+            },
+        )
+        .unwrap();
+
+    board.set_state(BoardState::ToMove(Color::White));
+
+    assert_eq!(
+        board.move_troop(
+            Position {
+                file: File::A,
+                rank: Rank::Three
+            },
+            Position {
+                file: File::A,
+                rank: Rank::Two
+            }
+        ),
+        Err(Error::Move(MoveError::InvalidPath(
+            "Pawn cannot move backwards"
+        )))
+    );
+}

@@ -325,6 +325,22 @@ impl Board {
                         }
                     }
                 }
+                match troop.color {
+                    Color::White => {
+                        if from.rank > to.rank {
+                            return Err(Error::Move(MoveError::InvalidPath(
+                                "Pawn cannot move backwards",
+                            )));
+                        }
+                    }
+                    Color::Black => {
+                        if from.rank < to.rank {
+                            return Err(Error::Move(MoveError::InvalidPath(
+                                "Pawn cannot move backwards",
+                            )));
+                        }
+                    }
+                }
                 if rank_diff > 2 {
                     return Err(Error::Move(MoveError::InvalidPath(
                         "Pawn cannot move more than two spaces vertically",
