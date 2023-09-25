@@ -480,7 +480,6 @@ impl Board {
             }
         }
 
-        dbg!(&path);
         Ok(path)
     }
 
