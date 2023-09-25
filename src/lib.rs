@@ -306,6 +306,22 @@ impl Board {
         };
         match troop.piece {
             Piece::Pawn => {
+                match troop.color {
+                    Color::White => {
+                        if from.rank > to.rank {
+                            return Err(Error::Move(MoveError::InvalidPath(
+                                        "Pawn cannot move backwards",
+                                        )));
+                        }
+                    }
+                    Color::Black => {
+                        if from.rank < to.rank {
+                            return Err(Error::Move(MoveError::InvalidPath(
+                                        "Pawn cannot move backwards",
+                                        )));
+                        }
+                    }
+                }
                 if rank_diff == 2 {
                     match troop.color {
                         Color::White => {
@@ -321,22 +337,6 @@ impl Board {
                                     "Pawn must be on its starting square to move two spaces",
                                 )));
                             }
-                        }
-                    }
-                }
-                match troop.color {
-                    Color::White => {
-                        if from.rank > to.rank {
-                            return Err(Error::Move(MoveError::InvalidPath(
-                                "Pawn cannot move backwards",
-                            )));
-                        }
-                    }
-                    Color::Black => {
-                        if from.rank < to.rank {
-                            return Err(Error::Move(MoveError::InvalidPath(
-                                "Pawn cannot move backwards",
-                            )));
                         }
                     }
                 }
