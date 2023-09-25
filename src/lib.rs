@@ -291,7 +291,7 @@ impl Board {
                 either::Either::Left(from.file as u8 + 2..to.file as u8 + 2)
             }
             std::cmp::Ordering::Greater => {
-                either::Either::Right((to.file as u8 - 2..from.file as u8 - 2).rev())
+                either::Either::Right((to.file as u8..from.file as u8 + 1).rev())
             }
         };
         let rank_iter = match Rank::cmp(&from.rank, &to.rank) {
@@ -302,7 +302,7 @@ impl Board {
                 either::Either::Left(from.rank as u8 + 2..to.rank as u8 + 2)
             }
             std::cmp::Ordering::Greater => {
-                either::Either::Right((to.rank as u8 - 2..from.rank as u8 - 2).rev())
+                either::Either::Right((to.rank as u8..from.rank as u8 + 1).rev())
             }
         };
         match troop.piece {
@@ -417,14 +417,18 @@ impl Board {
                 let mut file = match File::cmp(&from.file, &to.file) {
                     std::cmp::Ordering::Less => from.file as u8 + 2,
                     std::cmp::Ordering::Equal => from.file as u8 + 2,
-                    std::cmp::Ordering::Greater => to.file as u8 - 2,
+                    std::cmp::Ordering::Greater => from.file as u8,
                 };
                 for rank in rank_iter {
                     path.push(Position {
                         file: File::try_from(file).unwrap(),
                         rank: Rank::try_from(rank).unwrap(),
                     });
-                    file += 1;
+                    match File::cmp(&from.file, &to.file) {
+                        std::cmp::Ordering::Less => file += 1,
+                        std::cmp::Ordering::Equal => file += 1,
+                        std::cmp::Ordering::Greater => file -= 1,
+                    }
                 }
             }
             Piece::King => {
@@ -445,14 +449,18 @@ impl Board {
                     let mut file = match File::cmp(&from.file, &to.file) {
                         std::cmp::Ordering::Less => from.file as u8 + 2,
                         std::cmp::Ordering::Equal => from.file as u8 + 2,
-                        std::cmp::Ordering::Greater => to.file as u8 - 2,
+                        std::cmp::Ordering::Greater => from.file as u8,
                     };
                     for rank in rank_iter {
                         path.push(Position {
                             file: File::try_from(file).unwrap(),
                             rank: Rank::try_from(rank).unwrap(),
                         });
-                        file += 1;
+                        match File::cmp(&from.file, &to.file) {
+                            std::cmp::Ordering::Less => file += 1,
+                            std::cmp::Ordering::Equal => file += 1,
+                            std::cmp::Ordering::Greater => file -= 1,
+                        }
                     }
                 } else if file_diff > 0 {
                     for file in file_iter {
