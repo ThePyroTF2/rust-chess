@@ -1,3 +1,4 @@
+#![feature(step_trait)]
 mod tests;
 use std::collections::HashMap;
 
@@ -282,6 +283,28 @@ impl Board {
         let mut path = vec![];
         let file_diff = (from.file as i8 - to.file as i8).abs();
         let rank_diff = (from.rank as i8 - to.rank as i8).abs();
+        let file_iter = match File::cmp(&from.file, &to.file) {
+            std::cmp::Ordering::Less => {
+                either::Either::Left(from.file as u8 + 2..to.file as u8 + 2)
+            }
+            std::cmp::Ordering::Equal => {
+                either::Either::Left(from.file as u8 + 2..to.file as u8 + 2)
+            }
+            std::cmp::Ordering::Greater => {
+                either::Either::Right((to.file as u8 - 2..from.file as u8 - 2).rev())
+            }
+        };
+        let rank_iter = match Rank::cmp(&from.rank, &to.rank) {
+            std::cmp::Ordering::Less => {
+                either::Either::Left(from.rank as u8 + 2..to.rank as u8 + 2)
+            }
+            std::cmp::Ordering::Equal => {
+                either::Either::Left(from.rank as u8 + 2..to.rank as u8 + 2)
+            }
+            std::cmp::Ordering::Greater => {
+                either::Either::Right((to.rank as u8 - 2..from.rank as u8 - 2).rev())
+            }
+        };
         match troop.piece {
             Piece::Pawn => {
                 if rank_diff == 2 {
@@ -318,14 +341,15 @@ impl Board {
                     )));
                 }
                 if rank_diff > 1 {
-                    for rank in (from.rank as u8)..(to.rank as u8) {
+                    for rank in rank_iter {
                         path.push(Position {
                             file: from.file,
-                            rank: Rank::try_from(rank + 2).unwrap(),
+                            rank: Rank::try_from(rank).unwrap(),
                         });
                     }
+                } else {
+                    path.push(to);
                 }
-                path.push(to);
             }
             Piece::Rook => {
                 if file_diff > 0 && rank_diff > 0 {
@@ -334,20 +358,20 @@ impl Board {
                     )));
                 }
                 if file_diff > 0 {
-                    for file in (from.file as u8)..(to.file as u8) {
+                    for file in file_iter {
                         path.push(Position {
                             // + 2 because File::A as u8 == 0 and we don't want to include the
                             // starting square in the path
-                            file: File::try_from(file + 2).unwrap(),
+                            file: File::try_from(file).unwrap(),
                             rank: from.rank,
                         });
                     }
                 }
                 if rank_diff > 0 {
-                    for rank in (from.rank as u8)..(to.rank as u8) {
+                    for rank in rank_iter {
                         path.push(Position {
                             file: from.file,
-                            rank: Rank::try_from(rank + 2).unwrap(),
+                            rank: Rank::try_from(rank).unwrap(),
                         });
                     }
                 }
@@ -365,17 +389,17 @@ impl Board {
                 }
                 match rank_diff {
                     1 => {
-                        for file in (from.file as u8)..=(to.file as u8) {
+                        for file in file_iter {
                             path.push(Position {
                                 rank: to.rank,
-                                file: File::try_from(file + 1).unwrap(),
+                                file: File::try_from(file).unwrap(),
                             });
                         }
                     }
                     2 => {
-                        for rank in (from.rank as u8)..(to.rank as u8) {
+                        for rank in rank_iter {
                             path.push(Position {
-                                rank: Rank::try_from(rank + 2).unwrap(),
+                                rank: Rank::try_from(rank).unwrap(),
                                 file: from.file,
                             });
                         }
@@ -390,11 +414,15 @@ impl Board {
                         "Bishop must move in a purely diagonal line",
                     )));
                 }
-                let mut file = from.file as u8;
-                for rank in (from.rank as u8)..(to.rank as u8) {
+                let mut file = match File::cmp(&from.file, &to.file) {
+                    std::cmp::Ordering::Less => from.file as u8 + 2,
+                    std::cmp::Ordering::Equal => from.file as u8 + 2,
+                    std::cmp::Ordering::Greater => to.file as u8 - 2,
+                };
+                for rank in rank_iter {
                     path.push(Position {
-                        file: File::try_from(file + 2).unwrap(),
-                        rank: Rank::try_from(rank + 2).unwrap(),
+                        file: File::try_from(file).unwrap(),
+                        rank: Rank::try_from(rank).unwrap(),
                     });
                     file += 1;
                 }
@@ -414,32 +442,37 @@ impl Board {
                     )));
                 }
                 if file_diff == rank_diff {
-                    let mut file = from.file as u8;
-                    for rank in (from.rank as u8)..(to.rank as u8) {
+                    let mut file = match File::cmp(&from.file, &to.file) {
+                        std::cmp::Ordering::Less => from.file as u8 + 2,
+                        std::cmp::Ordering::Equal => from.file as u8 + 2,
+                        std::cmp::Ordering::Greater => to.file as u8 - 2,
+                    };
+                    for rank in rank_iter {
                         path.push(Position {
-                            file: File::try_from(file + 2).unwrap(),
-                            rank: Rank::try_from(rank + 2).unwrap(),
+                            file: File::try_from(file).unwrap(),
+                            rank: Rank::try_from(rank).unwrap(),
                         });
                         file += 1;
                     }
                 } else if file_diff > 0 {
-                    for file in (from.file as u8)..(to.file as u8) {
+                    for file in file_iter {
                         path.push(Position {
-                            file: File::try_from(file + 2).unwrap(),
+                            file: File::try_from(file).unwrap(),
                             rank: from.rank,
                         });
                     }
                 } else if rank_diff > 0 {
-                    for rank in (from.rank as u8)..(to.rank as u8) {
+                    for rank in rank_iter {
                         path.push(Position {
                             file: from.file,
-                            rank: Rank::try_from(rank + 2).unwrap(),
+                            rank: Rank::try_from(rank).unwrap(),
                         });
                     }
                 }
             }
         }
 
+        dbg!(&path);
         Ok(path)
     }
 
@@ -511,6 +544,16 @@ pub enum Rank {
     Seven,
     Eight,
 }
+impl PartialOrd for Rank {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some((*self as u8).cmp(&(*other as u8)))
+    }
+}
+impl Ord for Rank {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        (*self as u8).cmp(&(*other as u8))
+    }
+}
 impl TryFrom<u8> for Rank {
     type Error = Error;
     fn try_from(rank: u8) -> Result<Self, Self::Error> {
@@ -523,7 +566,10 @@ impl TryFrom<u8> for Rank {
             6 => Ok(Rank::Six),
             7 => Ok(Rank::Seven),
             8 => Ok(Rank::Eight),
-            _ => Err(Error::RankParse),
+            _ => {
+                eprintln!("Invalid rank: {}", rank);
+                Err(Error::RankParse)
+            }
         }
     }
 }
@@ -540,6 +586,16 @@ pub enum File {
     G,
     H,
 }
+impl PartialOrd for File {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some((*self as u8).cmp(&(*other as u8)))
+    }
+}
+impl Ord for File {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        (*self as u8).cmp(&(*other as u8))
+    }
+}
 impl TryFrom<u8> for File {
     type Error = Error;
     fn try_from(file: u8) -> Result<Self, Self::Error> {
@@ -552,7 +608,10 @@ impl TryFrom<u8> for File {
             6 => Ok(File::F),
             7 => Ok(File::G),
             8 => Ok(File::H),
-            _ => Err(Error::FileParse),
+            _ => {
+                eprintln!("Invalid file: {}", file);
+                Err(Error::FileParse)
+            }
         }
     }
 }

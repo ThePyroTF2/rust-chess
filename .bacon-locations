@@ -1,6 +1,0 @@
-warning /home/devin/Software Dev/rust-chess/src/tests/movement/bishop.rs:1:5 unused import: `crate::*`
-warning /home/devin/Software Dev/rust-chess/src/tests/movement/king.rs:1:5 unused import: `crate::*`
-warning /home/devin/Software Dev/rust-chess/src/tests/movement/knight.rs:1:5 unused import: `crate::*`
-warning /home/devin/Software Dev/rust-chess/src/tests/movement/pawn.rs:1:5 unused import: `crate::*`
-warning /home/devin/Software Dev/rust-chess/src/tests/movement/queen.rs:1:5 unused import: `crate::*`
-warning /home/devin/Software Dev/rust-chess/src/tests/movement/rook.rs:1:5 unused import: `crate::*`
