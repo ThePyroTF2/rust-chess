@@ -224,8 +224,9 @@ impl Board {
         }
 
         match from_troop.piece {
-            Piece::Pawn => {
-                if !self.valid_moves(from).contains(&to_square) {
+            Piece::Pawn | Piece::Rook => {
+                dbg!(self.valid_moves(from_troop));
+                if !self.valid_moves(from_troop).contains(&to_square) {
                     return Err(Error::Move(MoveError::Other));
                 }
             }
@@ -288,29 +289,6 @@ impl Board {
             }
         };
         match troop.piece {
-            Piece::Rook => {
-                if file_diff > 0 && rank_diff > 0 {
-                    return Err(Error::Move(MoveError::Other));
-                }
-                if file_diff > 0 {
-                    for file in file_iter {
-                        path.push(Position {
-                            // + 2 because File::A as u8 == 0 and we don't want to include the
-                            // starting square in the path
-                            file: File::try_from(file).unwrap(),
-                            rank: from.rank,
-                        });
-                    }
-                }
-                if rank_diff > 0 {
-                    for rank in rank_iter {
-                        path.push(Position {
-                            file: from.file,
-                            rank: Rank::try_from(rank).unwrap(),
-                        });
-                    }
-                }
-            }
             Piece::Knight => {
                 if file_diff == 0 || rank_diff == 0 {
                     return Err(Error::Move(MoveError::Other));
@@ -409,27 +387,17 @@ impl Board {
         Ok(path)
     }
 
-    pub fn valid_moves(&self, position: Position) -> Vec<&Square> {
+    pub fn valid_moves(&self, troop: &Troop) -> Vec<&Square> {
         let mut valid_moves = vec![];
-
-        let troop = self
-            .squares
-            .get(&position.file)
-            .unwrap()
-            .get(&position.rank)
-            .unwrap()
-            .troop
-            .as_ref()
-            .unwrap();
 
         match troop.piece {
             Piece::Pawn => match troop.color {
                 Color::White => {
-                    let position_in_front = match position.rank {
+                    let position_in_front = match troop.position.rank {
                         Rank::Eight => None,
                         _ => Some(Position {
-                            file: position.file,
-                            rank: Rank::try_from(position.rank as u8 + 2).unwrap(),
+                            file: troop.position.file,
+                            rank: Rank::try_from(troop.position.rank as u8 + 2).unwrap(),
                         }),
                     };
                     if let Some(position_in_front) = position_in_front {
@@ -446,28 +414,23 @@ impl Board {
                         }
                     }
                     if troop.position.rank == Rank::Two {
-                        let position_two_in_front = match position.rank {
-                            Rank::Seven => None,
-                            _ => Some(Position {
-                                file: position.file,
-                                rank: Rank::try_from(position.rank as u8 + 3).unwrap(),
-                            }),
+                        let position_two_in_front = Position {
+                            file: troop.position.file,
+                            rank: Rank::try_from(troop.position.rank as u8 + 3).unwrap(),
                         };
-                        if let Some(position_two_in_front) = position_two_in_front {
-                            let troop_two_in_front =
-                                self.get_square(&position_two_in_front).troop.as_ref();
-                            if troop_two_in_front.is_none()
-                                && self.get_square(&position_in_front.unwrap()).troop.is_none()
-                            {
-                                valid_moves.push(self.get_square(&position_two_in_front));
-                            }
+                        let troop_two_in_front =
+                            self.get_square(&position_two_in_front).troop.as_ref();
+                        if troop_two_in_front.is_none()
+                            && self.get_square(&position_in_front.unwrap()).troop.is_none()
+                        {
+                            valid_moves.push(self.get_square(&position_two_in_front));
                         }
                     }
-                    let position_diagonal_left = match position.file {
+                    let position_diagonal_left = match troop.position.file {
                         File::A => None,
                         _ => Some(Position {
-                            file: File::try_from(position.file as u8).unwrap(),
-                            rank: Rank::try_from(position.rank as u8 + 2).unwrap(),
+                            file: File::try_from(troop.position.file as u8).unwrap(),
+                            rank: Rank::try_from(troop.position.rank as u8 + 2).unwrap(),
                         }),
                     };
                     if let Some(position_diagonal_left) = position_diagonal_left {
@@ -479,11 +442,11 @@ impl Board {
                             }
                         }
                     }
-                    let position_diagonal_right = match position.file {
+                    let position_diagonal_right = match troop.position.file {
                         File::H => None,
                         _ => Some(Position {
-                            file: File::try_from(position.file as u8 + 2).unwrap(),
-                            rank: Rank::try_from(position.rank as u8 + 2).unwrap(),
+                            file: File::try_from(troop.position.file as u8 + 2).unwrap(),
+                            rank: Rank::try_from(troop.position.rank as u8 + 2).unwrap(),
                         }),
                     };
                     if let Some(position_diagonal_right) = position_diagonal_right {
@@ -497,11 +460,11 @@ impl Board {
                     }
                 }
                 Color::Black => {
-                    let position_in_front = match position.rank {
+                    let position_in_front = match troop.position.rank {
                         Rank::One => None,
                         _ => Some(Position {
-                            file: position.file,
-                            rank: Rank::try_from(position.rank as u8).unwrap(),
+                            file: troop.position.file,
+                            rank: Rank::try_from(troop.position.rank as u8).unwrap(),
                         }),
                     };
                     if let Some(position_in_front) = position_in_front {
@@ -518,33 +481,23 @@ impl Board {
                         }
                     }
                     if troop.position.rank == Rank::Seven {
-                        let position_two_in_front = match position.rank {
-                            Rank::Two => None,
-                            _ => Some(Position {
-                                file: position.file,
-                                rank: Rank::try_from(position.rank as u8 - 1).unwrap(),
-                            }),
+                        let position_two_in_front = Position {
+                            file: troop.position.file,
+                            rank: Rank::try_from(troop.position.rank as u8 - 1).unwrap(),
                         };
-                        if let Some(position_two_in_front) = position_two_in_front {
-                            let troop_two_in_front =
-                                self.get_square(&position_two_in_front).troop.as_ref();
-                            match troop_two_in_front {
-                                Some(troop_two_in_front) => {
-                                    if troop_two_in_front.color != troop.color {
-                                        valid_moves.push(self.get_square(&position_two_in_front));
-                                    }
-                                }
-                                None => {
-                                    valid_moves.push(self.get_square(&position_two_in_front));
-                                }
-                            }
+                        let troop_two_in_front =
+                            self.get_square(&position_two_in_front).troop.as_ref();
+                        if troop_two_in_front.is_none()
+                            && self.get_square(&position_in_front.unwrap()).troop.is_none()
+                        {
+                            valid_moves.push(self.get_square(&position_two_in_front));
                         }
                     }
-                    let position_diagonal_left = match position.file {
+                    let position_diagonal_left = match troop.position.file {
                         File::A => None,
                         _ => Some(Position {
-                            file: File::try_from(position.file as u8).unwrap(),
-                            rank: Rank::try_from(position.rank as u8 - 1).unwrap(),
+                            file: File::try_from(troop.position.file as u8).unwrap(),
+                            rank: Rank::try_from(troop.position.rank as u8).unwrap(),
                         }),
                     };
                     if let Some(position_diagonal_left) = position_diagonal_left {
@@ -556,11 +509,11 @@ impl Board {
                             }
                         }
                     }
-                    let position_diagonal_right = match position.file {
+                    let position_diagonal_right = match troop.position.file {
                         File::H => None,
                         _ => Some(Position {
-                            file: File::try_from(position.file as u8 + 2).unwrap(),
-                            rank: Rank::try_from(position.rank as u8 - 1).unwrap(),
+                            file: File::try_from(troop.position.file as u8 + 2).unwrap(),
+                            rank: Rank::try_from(troop.position.rank as u8).unwrap(),
                         }),
                     };
                     if let Some(position_diagonal_right) = position_diagonal_right {
@@ -574,6 +527,108 @@ impl Board {
                     }
                 }
             },
+            Piece::Rook => {
+                let mut rank_num = troop.position.rank as u8;
+                while let Ok(rank) = Rank::try_from(rank_num) {
+                    let blocking_troop = self
+                        .get_square(&Position {
+                            file: troop.position.file,
+                            rank,
+                        })
+                        .troop
+                        .as_ref();
+                    match blocking_troop {
+                        Some(blocking_troop) => {
+                            if blocking_troop.color != troop.color {
+                                valid_moves.push(self.get_square(&blocking_troop.position));
+                            }
+                            break;
+                        }
+                        None => {
+                            valid_moves.push(self.get_square(&Position {
+                                file: troop.position.file,
+                                rank,
+                            }));
+                        }
+                    }
+                    rank_num -= 1;
+                }
+                rank_num = troop.position.rank as u8 + 2;
+                while let Ok(rank) = Rank::try_from(rank_num) {
+                    let blocking_troop = self
+                        .get_square(&Position {
+                            file: troop.position.file,
+                            rank,
+                        })
+                        .troop
+                        .as_ref();
+                    match blocking_troop {
+                        Some(blocking_troop) => {
+                            if blocking_troop.color != troop.color {
+                                valid_moves.push(self.get_square(&blocking_troop.position));
+                            }
+                            break;
+                        }
+                        None => {
+                            valid_moves.push(self.get_square(&Position {
+                                file: troop.position.file,
+                                rank,
+                            }));
+                        }
+                    }
+                    rank_num += 1;
+                }
+                let mut file_num = troop.position.file as u8;
+                while let Ok(file) = File::try_from(file_num) {
+                    let blocking_troop = self
+                        .get_square(&Position {
+                            rank: troop.position.rank,
+                            file,
+                        })
+                        .troop
+                        .as_ref();
+                    match blocking_troop {
+                        Some(blocking_troop) => {
+                            if blocking_troop.color != troop.color {
+                                valid_moves.push(self.get_square(&blocking_troop.position));
+                            }
+                            break;
+                        }
+                        None => {
+                            valid_moves.push(self.get_square(&Position {
+                                rank: troop.position.rank,
+                                file,
+                            }));
+                        }
+                    }
+                    file_num -= 1;
+                }
+                file_num = troop.position.file as u8 + 2;
+                while let Ok(file) = File::try_from(file_num) {
+                    let blocking_troop = self
+                        .get_square(&Position {
+                            rank: troop.position.rank,
+                            file,
+                        })
+                        .troop
+                        .as_ref();
+                    match blocking_troop {
+                        Some(blocking_troop) => {
+                            if blocking_troop.color != troop.color {
+                                valid_moves.push(self.get_square(&blocking_troop.position));
+                            }
+                            break;
+                        }
+                        None => {
+                            valid_moves.push(self.get_square(&Position {
+                                rank: troop.position.rank,
+                                file,
+                            }));
+                        }
+                    }
+                    file_num += 1;
+                }
+            }
             _ => todo!(),
         }
 
