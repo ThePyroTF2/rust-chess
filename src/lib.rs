@@ -223,7 +223,6 @@ impl Board {
             }
         }
 
-        dbg!(self.valid_moves(from_troop));
         if !self.valid_moves(from_troop).contains(&to_square) {
             return Err(Error::Move(MoveError::Other));
         }
@@ -905,7 +904,6 @@ impl TryFrom<u8> for Rank {
             7 => Ok(Rank::Seven),
             8 => Ok(Rank::Eight),
             _ => {
-                eprintln!("Invalid rank: {}", rank);
                 Err(Error::RankParse)
             }
         }
@@ -947,7 +945,6 @@ impl TryFrom<u8> for File {
             7 => Ok(File::G),
             8 => Ok(File::H),
             _ => {
-                eprintln!("Invalid file: {}", file);
                 Err(Error::FileParse)
             }
         }
