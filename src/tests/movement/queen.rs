@@ -58,8 +58,6 @@ fn invalid_movement() {
                 rank: Rank::Three
             }
         ),
-        Err(Error::Move(MoveError::InvalidPath(
-            "Queen must move in a purely vertical, horizontal, or diagonal line"
-        )))
+        Err(Error::Move(MoveError::Other))
     );
 }

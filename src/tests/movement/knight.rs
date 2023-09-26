@@ -32,8 +32,6 @@ fn invalid_movement() {
                 rank: Rank::Four,
             },
         ),
-        Err(Error::Move(MoveError::InvalidPath(
-            "Knight must move either two spaces horizontally and one space vertically, or two spaces vertically and one space horizontally"
-        ))),
+        Err(Error::Move(MoveError::Other)),
     );
 }

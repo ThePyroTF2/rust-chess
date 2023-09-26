@@ -36,9 +36,7 @@ fn invalid_movement() {
                 rank: Rank::Four,
             },
         ),
-        Err(Error::Move(MoveError::InvalidPath(
-            "Bishop must move in a purely diagonal line"
-        )))
+        Err(Error::Move(MoveError::Other))
     );
 }
 
@@ -56,6 +54,6 @@ fn blocked_path() {
                 rank: Rank::Three
             }
         ),
-        Err(Error::Move(MoveError::PathIsBlocked))
+        Err(Error::Move(MoveError::Other))
     );
 }

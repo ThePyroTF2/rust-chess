@@ -36,8 +36,6 @@ fn invalid_movement() {
                 rank: Rank::Three
             },
         ),
-        Err(Error::Move(MoveError::InvalidPath(
-            "King cannot move more than one space in any direction"
-        ))),
+        Err(Error::Move(MoveError::Other)),
     );
 }

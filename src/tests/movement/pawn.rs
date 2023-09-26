@@ -97,9 +97,7 @@ fn non_capture_diagonal() {
                 rank: Rank::Three,
             }
         ),
-        Err(Error::Move(MoveError::InvalidPath(
-            "Pawn cannot move diagonally without capturing"
-        )))
+        Err(Error::Move(MoveError::Other))
     );
 }
 
@@ -117,9 +115,7 @@ fn two_squares_horizontally() {
                 rank: Rank::Three,
             }
         ),
-        Err(Error::Move(MoveError::InvalidPath(
-            "Pawn cannot move more than one space horizontally"
-        )))
+        Err(Error::Move(MoveError::Other))
     );
 }
 
@@ -137,9 +133,7 @@ fn three_squares_vertically() {
                 rank: Rank::Five,
             }
         ),
-        Err(Error::Move(MoveError::InvalidPath(
-            "Pawn cannot move more than two spaces vertically"
-        )))
+        Err(Error::Move(MoveError::Other))
     );
 }
 
@@ -168,7 +162,7 @@ fn blocked_path() {
                 rank: Rank::Four
             }
         ),
-        Err(Error::Move(MoveError::PathIsBlocked))
+        Err(Error::Move(MoveError::Other))
     );
 }
 
@@ -201,8 +195,6 @@ fn backwards() {
                 rank: Rank::Two
             }
         ),
-        Err(Error::Move(MoveError::InvalidPath(
-            "Pawn cannot move backwards"
-        )))
+        Err(Error::Move(MoveError::Other))
     );
 }

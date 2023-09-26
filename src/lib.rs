@@ -21,10 +21,7 @@ impl From<Error> for actix_web::Error {
                 MoveError::FriendlyFire => {
                     actix_web::error::ErrorBadRequest("Friendly fire is not allowed")
                 }
-                MoveError::InvalidPath(r) => {
-                    actix_web::error::ErrorBadRequest(format!("Invalid path. Reason: {}", r))
-                }
-                MoveError::PathIsBlocked => actix_web::error::ErrorBadRequest("Path is blocked"),
+                MoveError::Other => actix_web::error::ErrorBadRequest("Invalid Path"),
                 MoveError::NoMotion => actix_web::error::ErrorBadRequest("No motion"),
             },
         }
@@ -45,10 +42,7 @@ impl From<Error> for lambda_runtime::Error {
                 MoveError::FriendlyFire => {
                     lambda_runtime::Error::from("Friendly fire is not allowed")
                 }
-                MoveError::InvalidPath(r) => {
-                    lambda_runtime::Error::from(format!("Invalid path. Reason: {}", r))
-                }
-                MoveError::PathIsBlocked => lambda_runtime::Error::from("Path is blocked"),
+                MoveError::Other => lambda_runtime::Error::from("Invalid Path"),
                 MoveError::NoMotion => lambda_runtime::Error::from("No motion"),
             },
         }
@@ -64,8 +58,7 @@ pub enum MoveError {
     EmptyStartingSquare,
     NotYourTurn,
     FriendlyFire,
-    InvalidPath(&'static str),
-    PathIsBlocked,
+    Other,
     NoMotion,
 }
 
@@ -198,14 +191,25 @@ impl std::fmt::Display for Board {
 
 #[cfg(feature = "actions")]
 impl Board {
-    pub fn move_troop(&mut self, from: Position, to: Position) -> Result<(), Error> {
-        let from_square = self
-            .squares
-            .get(&from.file)
+    pub fn get_square(&self, position: &Position) -> &Square {
+        self.squares
+            .get(&position.file)
             .unwrap()
-            .get(&from.rank)
-            .unwrap();
-        let to_square = self.squares.get(&to.file).unwrap().get(&to.rank).unwrap();
+            .get(&position.rank)
+            .unwrap()
+    }
+
+    pub fn get_mut_square(&mut self, position: &Position) -> &mut Square {
+        self.squares
+            .get_mut(&position.file)
+            .unwrap()
+            .get_mut(&position.rank)
+            .unwrap()
+    }
+
+    pub fn move_troop(&mut self, from: Position, to: Position) -> Result<(), Error> {
+        let from_square = self.get_square(&from);
+        let to_square = self.get_square(&to);
         if from_square.troop.is_none() {
             return Err(Error::Move(MoveError::EmptyStartingSquare));
         }
@@ -213,51 +217,35 @@ impl Board {
         if !self.state.can_move(from_troop.color) {
             return Err(Error::Move(MoveError::NotYourTurn));
         }
-        let mut capturing = false;
         if let Some(troop) = &to_square.troop {
-            capturing = true;
             if troop.color == from_troop.color {
                 return Err(Error::Move(MoveError::FriendlyFire));
             }
         }
 
-        let path = Self::make_path(from_troop, from, to, capturing)?;
-        if from_troop.piece != Piece::Knight {
-            for (index, position) in path.iter().enumerate() {
-                let square = self
-                    .squares
-                    .get(&position.file)
-                    .unwrap()
-                    .get(&position.rank)
-                    .unwrap();
-                if index != path.len() - 1 && square.troop.is_some() {
-                    return Err(Error::Move(MoveError::PathIsBlocked));
+        match from_troop.piece {
+            Piece::Pawn => {
+                if !self.valid_moves(from).contains(&to_square) {
+                    return Err(Error::Move(MoveError::Other));
+                }
+            }
+            _ => {
+                let path = Self::make_path(from_troop, from, to)?;
+                if from_troop.piece != Piece::Knight {
+                    for (index, position) in path.iter().enumerate() {
+                        let square = self.get_square(position);
+                        if index != path.len() - 1 && square.troop.is_some() {
+                            return Err(Error::Move(MoveError::Other));
+                        }
+                    }
                 }
             }
         }
 
-        self.squares
-            .get_mut(&to.file)
-            .unwrap()
-            .get_mut(&to.rank)
-            .unwrap()
-            .troop = Some(from_troop.clone());
-        self.squares
-            .get_mut(&from.file)
-            .unwrap()
-            .get_mut(&from.rank)
-            .unwrap()
-            .troop = None;
+        self.get_mut_square(&to).troop = Some(from_troop.clone());
+        self.get_mut_square(&from).troop = None;
 
-        self.squares
-            .get_mut(&to.file)
-            .unwrap()
-            .get_mut(&to.rank)
-            .unwrap()
-            .troop
-            .as_mut()
-            .unwrap()
-            .position = to;
+        self.get_mut_square(&to).troop.as_mut().unwrap().position = to;
 
         // TODO: Better state management (turn should only toggle if nothing else is triggered by
         // move. i.e., check, checkmate)
@@ -270,12 +258,7 @@ impl Board {
         Ok(())
     }
 
-    fn make_path(
-        troop: &Troop,
-        from: Position,
-        to: Position,
-        capturing: bool,
-    ) -> Result<Vec<Position>, Error> {
+    fn make_path(troop: &Troop, from: Position, to: Position) -> Result<Vec<Position>, Error> {
         if from == to {
             return Err(Error::Move(MoveError::NoMotion));
         }
@@ -305,72 +288,9 @@ impl Board {
             }
         };
         match troop.piece {
-            Piece::Pawn => {
-                match troop.color {
-                    Color::White => {
-                        if from.rank > to.rank {
-                            return Err(Error::Move(MoveError::InvalidPath(
-                                        "Pawn cannot move backwards",
-                                        )));
-                        }
-                    }
-                    Color::Black => {
-                        if from.rank < to.rank {
-                            return Err(Error::Move(MoveError::InvalidPath(
-                                        "Pawn cannot move backwards",
-                                        )));
-                        }
-                    }
-                }
-                if rank_diff == 2 {
-                    match troop.color {
-                        Color::White => {
-                            if from.rank != Rank::Two {
-                                return Err(Error::Move(MoveError::InvalidPath(
-                                    "Pawn must be on its starting square to move two spaces",
-                                )));
-                            }
-                        }
-                        Color::Black => {
-                            if from.rank != Rank::Seven {
-                                return Err(Error::Move(MoveError::InvalidPath(
-                                    "Pawn must be on its starting square to move two spaces",
-                                )));
-                            }
-                        }
-                    }
-                }
-                if rank_diff > 2 {
-                    return Err(Error::Move(MoveError::InvalidPath(
-                        "Pawn cannot move more than two spaces vertically",
-                    )));
-                }
-                if file_diff > 1 {
-                    return Err(Error::Move(MoveError::InvalidPath(
-                        "Pawn cannot move more than one space horizontally",
-                    )));
-                }
-                if file_diff == 1 && !capturing {
-                    return Err(Error::Move(MoveError::InvalidPath(
-                        "Pawn cannot move diagonally without capturing",
-                    )));
-                }
-                if rank_diff > 1 {
-                    for rank in rank_iter {
-                        path.push(Position {
-                            file: from.file,
-                            rank: Rank::try_from(rank).unwrap(),
-                        });
-                    }
-                } else {
-                    path.push(to);
-                }
-            }
             Piece::Rook => {
                 if file_diff > 0 && rank_diff > 0 {
-                    return Err(Error::Move(MoveError::InvalidPath(
-                        "Rook must move in a purely vertical or horizontal line",
-                    )));
+                    return Err(Error::Move(MoveError::Other));
                 }
                 if file_diff > 0 {
                     for file in file_iter {
@@ -393,14 +313,10 @@ impl Board {
             }
             Piece::Knight => {
                 if file_diff == 0 || rank_diff == 0 {
-                    return Err(Error::Move(MoveError::InvalidPath(
-                        "Knight must move either two spaces horizontally and one space vertically, or two spaces vertically and one space horizontally",
-                    )));
+                    return Err(Error::Move(MoveError::Other));
                 }
                 if file_diff + rank_diff != 3 {
-                    return Err(Error::Move(MoveError::InvalidPath(
-                        "Knight must move either two spaces horizontally and one space vertically, or two spaces vertically and one space horizontally",
-                    )));
+                    return Err(Error::Move(MoveError::Other));
                 }
                 match rank_diff {
                     1 => {
@@ -425,9 +341,7 @@ impl Board {
             }
             Piece::Bishop => {
                 if file_diff != rank_diff {
-                    return Err(Error::Move(MoveError::InvalidPath(
-                        "Bishop must move in a purely diagonal line",
-                    )));
+                    return Err(Error::Move(MoveError::Other));
                 }
                 let mut file = match File::cmp(&from.file, &to.file) {
                     std::cmp::Ordering::Less => from.file as u8 + 2,
@@ -448,17 +362,13 @@ impl Board {
             }
             Piece::King => {
                 if file_diff > 1 || rank_diff > 1 {
-                    return Err(Error::Move(MoveError::InvalidPath(
-                        "King cannot move more than one space in any direction",
-                    )));
+                    return Err(Error::Move(MoveError::Other));
                 }
                 path.push(to);
             }
             Piece::Queen => {
                 if file_diff > 0 && rank_diff > 0 && file_diff != rank_diff {
-                    return Err(Error::Move(MoveError::InvalidPath(
-                        "Queen must move in a purely vertical, horizontal, or diagonal line",
-                    )));
+                    return Err(Error::Move(MoveError::Other));
                 }
                 if file_diff == rank_diff {
                     let mut file = match File::cmp(&from.file, &to.file) {
@@ -493,9 +403,181 @@ impl Board {
                     }
                 }
             }
+            _ => unreachable!(),
         }
 
         Ok(path)
+    }
+
+    pub fn valid_moves(&self, position: Position) -> Vec<&Square> {
+        let mut valid_moves = vec![];
+
+        let troop = self
+            .squares
+            .get(&position.file)
+            .unwrap()
+            .get(&position.rank)
+            .unwrap()
+            .troop
+            .as_ref()
+            .unwrap();
+
+        match troop.piece {
+            Piece::Pawn => match troop.color {
+                Color::White => {
+                    let position_in_front = match position.rank {
+                        Rank::Eight => None,
+                        _ => Some(Position {
+                            file: position.file,
+                            rank: Rank::try_from(position.rank as u8 + 2).unwrap(),
+                        }),
+                    };
+                    if let Some(position_in_front) = position_in_front {
+                        let troop_in_front = &self.get_square(&position_in_front).troop;
+                        match troop_in_front {
+                            Some(troop_in_front) => {
+                                if troop_in_front.color != troop.color {
+                                    valid_moves.push(self.get_square(&position_in_front));
+                                }
+                            }
+                            None => {
+                                valid_moves.push(self.get_square(&position_in_front));
+                            }
+                        }
+                    }
+                    if troop.position.rank == Rank::Two {
+                        let position_two_in_front = match position.rank {
+                            Rank::Seven => None,
+                            _ => Some(Position {
+                                file: position.file,
+                                rank: Rank::try_from(position.rank as u8 + 3).unwrap(),
+                            }),
+                        };
+                        if let Some(position_two_in_front) = position_two_in_front {
+                            let troop_two_in_front =
+                                self.get_square(&position_two_in_front).troop.as_ref();
+                            if troop_two_in_front.is_none()
+                                && self.get_square(&position_in_front.unwrap()).troop.is_none()
+                            {
+                                valid_moves.push(self.get_square(&position_two_in_front));
+                            }
+                        }
+                    }
+                    let position_diagonal_left = match position.file {
+                        File::A => None,
+                        _ => Some(Position {
+                            file: File::try_from(position.file as u8).unwrap(),
+                            rank: Rank::try_from(position.rank as u8 + 2).unwrap(),
+                        }),
+                    };
+                    if let Some(position_diagonal_left) = position_diagonal_left {
+                        let troop_diagonal_left =
+                            self.get_square(&position_diagonal_left).troop.as_ref();
+                        if let Some(troop_diagonal_left) = troop_diagonal_left {
+                            if troop_diagonal_left.color != troop.color {
+                                valid_moves.push(self.get_square(&position_diagonal_left));
+                            }
+                        }
+                    }
+                    let position_diagonal_right = match position.file {
+                        File::H => None,
+                        _ => Some(Position {
+                            file: File::try_from(position.file as u8 + 2).unwrap(),
+                            rank: Rank::try_from(position.rank as u8 + 2).unwrap(),
+                        }),
+                    };
+                    if let Some(position_diagonal_right) = position_diagonal_right {
+                        let troop_diagonal_right =
+                            self.get_square(&position_diagonal_right).troop.as_ref();
+                        if let Some(troop_diagonal_right) = troop_diagonal_right {
+                            if troop_diagonal_right.color != troop.color {
+                                valid_moves.push(self.get_square(&position_diagonal_right));
+                            }
+                        }
+                    }
+                }
+                Color::Black => {
+                    let position_in_front = match position.rank {
+                        Rank::One => None,
+                        _ => Some(Position {
+                            file: position.file,
+                            rank: Rank::try_from(position.rank as u8).unwrap(),
+                        }),
+                    };
+                    if let Some(position_in_front) = position_in_front {
+                        let troop_in_front = &self.get_square(&position_in_front).troop;
+                        match troop_in_front {
+                            Some(troop_in_front) => {
+                                if troop_in_front.color != troop.color {
+                                    valid_moves.push(self.get_square(&position_in_front));
+                                }
+                            }
+                            None => {
+                                valid_moves.push(self.get_square(&position_in_front));
+                            }
+                        }
+                    }
+                    if troop.position.rank == Rank::Seven {
+                        let position_two_in_front = match position.rank {
+                            Rank::Two => None,
+                            _ => Some(Position {
+                                file: position.file,
+                                rank: Rank::try_from(position.rank as u8 - 1).unwrap(),
+                            }),
+                        };
+                        if let Some(position_two_in_front) = position_two_in_front {
+                            let troop_two_in_front =
+                                self.get_square(&position_two_in_front).troop.as_ref();
+                            match troop_two_in_front {
+                                Some(troop_two_in_front) => {
+                                    if troop_two_in_front.color != troop.color {
+                                        valid_moves.push(self.get_square(&position_two_in_front));
+                                    }
+                                }
+                                None => {
+                                    valid_moves.push(self.get_square(&position_two_in_front));
+                                }
+                            }
+                        }
+                    }
+                    let position_diagonal_left = match position.file {
+                        File::A => None,
+                        _ => Some(Position {
+                            file: File::try_from(position.file as u8).unwrap(),
+                            rank: Rank::try_from(position.rank as u8 - 1).unwrap(),
+                        }),
+                    };
+                    if let Some(position_diagonal_left) = position_diagonal_left {
+                        let troop_diagonal_left =
+                            self.get_square(&position_diagonal_left).troop.as_ref();
+                        if let Some(troop_diagonal_left) = troop_diagonal_left {
+                            if troop_diagonal_left.color != troop.color {
+                                valid_moves.push(self.get_square(&position_diagonal_left));
+                            }
+                        }
+                    }
+                    let position_diagonal_right = match position.file {
+                        File::H => None,
+                        _ => Some(Position {
+                            file: File::try_from(position.file as u8 + 2).unwrap(),
+                            rank: Rank::try_from(position.rank as u8 - 1).unwrap(),
+                        }),
+                    };
+                    if let Some(position_diagonal_right) = position_diagonal_right {
+                        let troop_diagonal_right =
+                            self.get_square(&position_diagonal_right).troop.as_ref();
+                        if let Some(troop_diagonal_right) = troop_diagonal_right {
+                            if troop_diagonal_right.color != troop.color {
+                                valid_moves.push(self.get_square(&position_diagonal_right));
+                            }
+                        }
+                    }
+                }
+            },
+            _ => todo!(),
+        }
+
+        valid_moves
     }
 
     pub fn reset(&mut self) {
@@ -515,23 +597,10 @@ impl Board {
 
     #[cfg(any(test, debug_assertions))]
     pub fn place_troop(&mut self, troop: Troop) -> Result<(), SquareOccupied> {
-        if self
-            .squares
-            .get(&troop.position.file)
-            .unwrap()
-            .get(&troop.position.rank)
-            .unwrap()
-            .troop
-            .is_some()
-        {
+        if self.get_square(&troop.position).troop.is_some() {
             return Err(SquareOccupied);
         }
-        self.squares
-            .get_mut(&troop.position.file)
-            .unwrap()
-            .get_mut(&troop.position.rank)
-            .unwrap()
-            .troop = Some(troop.clone());
+        self.get_mut_square(&troop.position).troop = Some(troop.clone());
         Ok(())
     }
 
@@ -645,7 +714,7 @@ pub struct Position {
     pub rank: Rank,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Square {
     pub troop: Option<Troop>,
@@ -663,7 +732,7 @@ pub enum Piece {
     King,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Troop {
     pub piece: Piece,

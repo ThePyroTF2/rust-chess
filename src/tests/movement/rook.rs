@@ -36,9 +36,7 @@ fn diagonal_movement() {
                 rank: Rank::Three,
             },
         ),
-        Err(Error::Move(MoveError::InvalidPath(
-            "Rook must move in a purely vertical or horizontal line"
-        ))),
+        Err(Error::Move(MoveError::Other)),
     );
 }
 
@@ -56,7 +54,7 @@ fn blocked_vertical() {
                 rank: Rank::Three
             }
         ),
-        Err(Error::Move(MoveError::PathIsBlocked))
+        Err(Error::Move(MoveError::Other))
     );
 }
 
@@ -78,6 +76,6 @@ fn blocked_horizonal() {
                 rank: Rank::One
             }
         ),
-        Err(Error::Move(MoveError::PathIsBlocked))
+        Err(Error::Move(MoveError::Other))
     );
 }
