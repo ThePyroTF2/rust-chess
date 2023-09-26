@@ -223,22 +223,9 @@ impl Board {
             }
         }
 
-        match from_troop.piece {
-            Piece::Pawn | Piece::Rook | Piece::Knight | Piece::Bishop | Piece::King => {
-                dbg!(self.valid_moves(from_troop));
-                if !self.valid_moves(from_troop).contains(&to_square) {
-                    return Err(Error::Move(MoveError::Other));
-                }
-            }
-            _ => {
-                let path = Self::make_path(from_troop, from, to)?;
-                for (index, position) in path.iter().enumerate() {
-                    let square = self.get_square(position);
-                    if index != path.len() - 1 && square.troop.is_some() {
-                        return Err(Error::Move(MoveError::Other));
-                    }
-                }
-            }
+        dbg!(self.valid_moves(from_troop));
+        if !self.valid_moves(from_troop).contains(&to_square) {
+            return Err(Error::Move(MoveError::Other));
         }
 
         self.get_mut_square(&to).troop = Some(from_troop.clone());
@@ -255,79 +242,6 @@ impl Board {
         }
 
         Ok(())
-    }
-
-    fn make_path(troop: &Troop, from: Position, to: Position) -> Result<Vec<Position>, Error> {
-        if from == to {
-            return Err(Error::Move(MoveError::NoMotion));
-        }
-        let mut path = vec![];
-        let file_diff = (from.file as i8 - to.file as i8).abs();
-        let rank_diff = (from.rank as i8 - to.rank as i8).abs();
-        let file_iter = match File::cmp(&from.file, &to.file) {
-            std::cmp::Ordering::Less => {
-                either::Either::Left(from.file as u8 + 2..to.file as u8 + 2)
-            }
-            std::cmp::Ordering::Equal => {
-                either::Either::Left(from.file as u8 + 2..to.file as u8 + 2)
-            }
-            std::cmp::Ordering::Greater => {
-                either::Either::Right((to.file as u8..from.file as u8 + 1).rev())
-            }
-        };
-        let rank_iter = match Rank::cmp(&from.rank, &to.rank) {
-            std::cmp::Ordering::Less => {
-                either::Either::Left(from.rank as u8 + 2..to.rank as u8 + 2)
-            }
-            std::cmp::Ordering::Equal => {
-                either::Either::Left(from.rank as u8 + 2..to.rank as u8 + 2)
-            }
-            std::cmp::Ordering::Greater => {
-                either::Either::Right((to.rank as u8..from.rank as u8 + 1).rev())
-            }
-        };
-        match troop.piece {
-            Piece::Queen => {
-                if file_diff > 0 && rank_diff > 0 && file_diff != rank_diff {
-                    return Err(Error::Move(MoveError::Other));
-                }
-                if file_diff == rank_diff {
-                    let mut file = match File::cmp(&from.file, &to.file) {
-                        std::cmp::Ordering::Less => from.file as u8 + 2,
-                        std::cmp::Ordering::Equal => from.file as u8 + 2,
-                        std::cmp::Ordering::Greater => from.file as u8,
-                    };
-                    for rank in rank_iter {
-                        path.push(Position {
-                            file: File::try_from(file).unwrap(),
-                            rank: Rank::try_from(rank).unwrap(),
-                        });
-                        match File::cmp(&from.file, &to.file) {
-                            std::cmp::Ordering::Less => file += 1,
-                            std::cmp::Ordering::Equal => file += 1,
-                            std::cmp::Ordering::Greater => file -= 1,
-                        }
-                    }
-                } else if file_diff > 0 {
-                    for file in file_iter {
-                        path.push(Position {
-                            file: File::try_from(file).unwrap(),
-                            rank: from.rank,
-                        });
-                    }
-                } else if rank_diff > 0 {
-                    for rank in rank_iter {
-                        path.push(Position {
-                            file: from.file,
-                            rank: Rank::try_from(rank).unwrap(),
-                        });
-                    }
-                }
-            }
-            _ => unreachable!(),
-        }
-
-        Ok(path)
     }
 
     pub fn valid_moves(&self, troop: &Troop) -> Vec<&Square> {
@@ -894,7 +808,20 @@ impl Board {
                     }
                 }
             }
-            _ => todo!(),
+            Piece::Queen => {
+                let bishop_moves = self.valid_moves(&Troop {
+                    piece: Piece::Bishop,
+                    color: troop.color,
+                    position: troop.position,
+                });
+                let rook_moves = self.valid_moves(&Troop {
+                    piece: Piece::Rook,
+                    color: troop.color,
+                    position: troop.position,
+                });
+                valid_moves.extend(bishop_moves);
+                valid_moves.extend(rook_moves);
+            }
         }
 
         valid_moves
