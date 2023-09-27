@@ -333,14 +333,14 @@ impl Board {
         }
 
         match self.state {
-            BoardState::ToMove(Color::White) => {
+            BoardState::ToMove(Color::White) | BoardState::Check(Color::White) => {
                 if self.check_for_check(Color::Black) {
                     self.state = BoardState::Check(Color::Black);
                 } else {
                     self.state = BoardState::ToMove(Color::Black);
                 }
             }
-            BoardState::ToMove(Color::Black) => {
+            BoardState::ToMove(Color::Black) | BoardState::Check(Color::Black) => {
                 if self.check_for_check(Color::White) {
                     self.state = BoardState::Check(Color::White);
                 } else {
